@@ -8,6 +8,10 @@
         .endereco-container {
             margin-bottom: 10px;
         }
+        #qr-code-container {
+            display: none;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -22,6 +26,14 @@
         <input type="submit" value="Calcular Rota">
     </form>
 
+    <!-- Container do QR Code -->
+    <div id="qr-code-container">
+        <h2>QR Code da Rota</h2>
+        <img id="qr-code-img" src="" alt="QR Code">
+        <br><br>
+        <button onclick="window.print()">Imprimir QR Code</button>
+    </div>
+
     <script>
         document.getElementById("adicionar-endereco").addEventListener("click", function() {
             const container = document.getElementById("enderecos-container");
@@ -29,6 +41,31 @@
             novoEndereco.classList.add("endereco-container");
             novoEndereco.innerHTML = '<input type="text" name="enderecos" placeholder="Exemplo: Rua B">';
             container.appendChild(novoEndereco);
+        });
+
+        // Função para exibir o QR Code
+        function showQRCode(url) {
+            document.getElementById("qr-code-img").src = url;
+            document.getElementById("qr-code-container").style.display = "block";
+        }
+
+        // Captura o resultado do envio do formulário
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(form);
+
+            fetch('/calcular-rota', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(data => {
+                // Cria um URL temporário para a imagem do QR Code e exibe
+                const url = URL.createObjectURL(data);
+                showQRCode(url);
+            })
+            .catch(error => console.error('Erro:', error));
         });
     </script>
 </body>
