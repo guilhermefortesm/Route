@@ -1,21 +1,35 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calcular Rota</title>
+    <style>
+        .endereco-container {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Insira os Endereços para Calcular a Rota</h1>
-    <form action="/calcular-rota" method="post">
-        <input type="text" name="enderecos" placeholder="Endereço 1 (obrigatório)" required><br>
-        <input type="text" name="enderecos" placeholder="Endereço 2"><br>
-        <input type="text" name="enderecos" placeholder="Endereço 3"><br>
-        <input type="text" name="enderecos" placeholder="Endereço 4"><br>
-        <input type="text" name="enderecos" placeholder="Endereço 5"><br>
-        <input type="text" name="enderecos" placeholder="Endereço 6"><br>
-        <input type="text" name="enderecos" placeholder="Endereço 7"><br>
-        <input type="text" name="enderecos" placeholder="Endereço 8"><br>
-        <button type="submit">Calcular Rota</button>
+    <h1>Digite os Endereços</h1>
+    <form action="/calcular-rota" method="POST">
+        <div id="enderecos-container">
+            <div class="endereco-container">
+                <input type="text" name="enderecos" placeholder="Exemplo: Rua A" required>
+            </div>
+        </div>
+        <button type="button" id="adicionar-endereco">Adicionar Endereço</button><br><br>
+        <input type="submit" value="Calcular Rota">
     </form>
+
+    <script>
+        document.getElementById("adicionar-endereco").addEventListener("click", function() {
+            const container = document.getElementById("enderecos-container");
+            const novoEndereco = document.createElement("div");
+            novoEndereco.classList.add("endereco-container");
+            novoEndereco.innerHTML = '<input type="text" name="enderecos" placeholder="Exemplo: Rua B">';
+            container.appendChild(novoEndereco);
+        });
+    </script>
 </body>
 </html>
