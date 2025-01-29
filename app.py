@@ -30,7 +30,7 @@ def obter_coordenadas(endereco):
         geocode_result = gmaps.geocode(endereco)
         
         if geocode_result:
-            return (geocode_result[0]['geometry']['location']['lat'], geocode_result[0]['geometry']['location']['lng'])
+            return (geocode_result[0]['geometry']['location']['lat'], geocode_result[0]['geometry']['location']['lng'], None)
         
         # Se o endereço não foi encontrado, sugerir alternativas com places
         places_result = gmaps.places(endereco)
@@ -39,12 +39,12 @@ def obter_coordenadas(endereco):
             sugestoes = []
             for place in places_result[:5]:  # Limita a 5 sugestões
                 sugestoes.append(place['formatted_address'])
-            return {'error': f"Endereço não encontrado. Veja as sugestões: {', '.join(sugestoes)}"}
+            return (None, None, sugestoes)  # Retorna sugestões para o front-end
         else:
-            return {'error': 'Endereço não encontrado e nenhuma sugestão disponível.'}
+            return (None, None, ['Endereço não encontrado. Nenhuma sugestão disponível.'])
         
     except Exception as e:
-        return {'error': f"Erro ao buscar o endereço {endereco}: {str(e)}"}
+        return (None, None, [f"Erro ao buscar o endereço {endereco}: {str(e)}"])
 
 @app.route('/')
 def index():
@@ -59,19 +59,19 @@ def calcular_rota():
 
     coordenadas = []
     erros = []
+    sugestoes = []
     for endereco in enderecos:
-        coords = obter_coordenadas(endereco)
-        if isinstance(coords, dict) and 'error' in coords:
-            erros.append(coords['error'])
+        lat, lng, sugestao = obter_coordenadas(endereco)
+        if lat is None and lng is None:
+            # Se o endereço é inválido ou não encontrado, guardamos as sugestões
+            sugestoes.append(sugestao)
         else:
-            coordenadas.append(coords)
+            coordenadas.append((lat, lng))
 
     if len(coordenadas) < 2:
         return jsonify({'error': 'Endereços insuficientes para calcular a rota'}), 400
 
-    if erros:
-        return jsonify({'errors': erros}), 400
-
+    # Sempre geramos o QR code, independentemente de erros nos endereços
     try:
         # Gera a URL da rota com o Google Maps
         route_url = f"https://www.google.com/maps/dir/?api=1&origin={coordenadas[0][0]},{coordenadas[0][1]}&destination={coordenadas[-1][0]},{coordenadas[-1][1]}&waypoints=" + '|'.join([f"{coord[0]},{coord[1]}" for coord in coordenadas[1:-1]])
@@ -97,7 +97,10 @@ def calcular_rota():
     img_io.seek(0)
 
     # Retornar a imagem do QR Code
-    return send_file(img_io, mimetype='image/png')
+    return jsonify({
+        'qrcode': img_io.getvalue().decode('latin1'),  # Encodifica a imagem como base64
+        'suggestions': sugestoes,
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
