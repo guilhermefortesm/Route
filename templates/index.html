@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Rota</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Estilos para garantir que a impressão seja feita corretamente */
+        @media print {
+            body {
+                font-family: Arial, sans-serif;
+                background-color: white;
+            }
+            #imprimir-btn, #erro {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
     <h1>Calculadora de Rota</h1>
@@ -25,6 +37,8 @@
     <div id="sugestoes"></div>
     <div id="qrcode"></div>
 
+    <button id="imprimir-btn" style="display: none;" onclick="imprimirQRCode()">Imprimir QR Code</button>
+
     <script>
         function adicionarEndereco() {
             const container = document.getElementById("enderecos-container");
@@ -43,6 +57,7 @@
                 $('#erro').html('');
                 $('#sugestoes').html('');
                 $('#qrcode').html('');
+                $('#imprimir-btn').hide(); // Ocultar botão de imprimir por padrão
 
                 if (response.suggestions && response.suggestions.length > 0) {
                     $('#erro').html('Alguns endereços não foram encontrados. Veja as sugestões para correção:');
@@ -55,6 +70,9 @@
                 const img = new Image();
                 img.src = 'data:image/png;base64,' + btoa(response.qrcode);
                 $('#qrcode').append(img);
+
+                // Exibe o botão de imprimir
+                $('#imprimir-btn').show();
             }).fail(function(jqXHR) {
                 const response = jqXHR.responseJSON;
                 $('#erro').html(response.error);
@@ -69,6 +87,19 @@
                     <input type="text" name="enderecos" value="${endereco}">
                 </div>
             `);
+        }
+
+        // Função para imprimir o QR Code
+        function imprimirQRCode() {
+            const qrCodeContainer = document.getElementById("qrcode");
+
+            // Criar uma nova janela para a impressão
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>Imprimir QR Code</title></head><body>');
+            printWindow.document.write(qrCodeContainer.innerHTML); // Inserir o QR Code na nova janela
+            printWindow.document.write('</body></html>');
+            printWindow.document.close(); // Fechar o documento para que o navegador possa imprimir
+            printWindow.print(); // Iniciar a impressão
         }
     </script>
 </body>
