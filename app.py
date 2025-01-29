@@ -1,12 +1,9 @@
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify
 import googlemaps
 import os
-import math
-from dotenv import load_dotenv
 import qrcode
-import random
-import string
 from io import BytesIO
+from dotenv import load_dotenv
 
 # Inicializando o Flask
 app = Flask(__name__)
@@ -63,7 +60,6 @@ def calcular_rota():
     for endereco in enderecos:
         lat, lng, sugestao = obter_coordenadas(endereco)
         if lat is None and lng is None:
-            # Se o endereço é inválido ou não encontrado, guardamos as sugestões
             sugestoes.append(sugestao)
         else:
             coordenadas.append((lat, lng))
@@ -71,15 +67,14 @@ def calcular_rota():
     if len(coordenadas) < 2:
         return jsonify({'error': 'Endereços insuficientes para calcular a rota'}), 400
 
-    # Sempre geramos o QR code, independentemente de erros nos endereços
+    # Otimização da rota com Google Maps (incluindo waypoints e otimizando a ordem)
     try:
-        # Gera a URL da rota com o Google Maps
-        route_url = f"https://www.google.com/maps/dir/?api=1&origin={coordenadas[0][0]},{coordenadas[0][1]}&destination={coordenadas[-1][0]},{coordenadas[-1][1]}&waypoints=" + '|'.join([f"{coord[0]},{coord[1]}" for coord in coordenadas[1:-1]])
-
+        waypoints = [f"{coord[0]},{coord[1]}" for coord in coordenadas[1:-1]]
+        route_url = f"https://www.google.com/maps/dir/?api=1&origin={coordenadas[0][0]},{coordenadas[0][1]}&destination={coordenadas[-1][0]},{coordenadas[-1][1]}&waypoints=" + '|'.join(waypoints) + "&optimize_waypoints=true"
     except Exception as e:
         return jsonify({'error': f'Erro ao calcular a rota: {str(e)}'}), 500
 
-    # Gerar o QR Code com a URL da rota
+    # Gerar o QR Code com a URL da rota otimizada
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
