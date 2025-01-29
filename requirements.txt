@@ -1,0 +1,5 @@
+Flask
+googlemaps
+geopy
+python-dotenv
+qrcode
