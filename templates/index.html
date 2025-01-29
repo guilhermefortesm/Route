@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Rota com QR Code</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initAutocomplete" async defer></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -107,23 +106,6 @@
 <script>
     let addresses = []; // Lista de endereços inseridos pelo usuário
 
-    // Função de autocomplete do Google Maps
-    function initAutocomplete() {
-        const input = document.getElementById('address-input');
-        const autocomplete = new google.maps.places.Autocomplete(input);
-
-        autocomplete.addListener('place_changed', function() {
-            const place = autocomplete.getPlace();
-            if (place.geometry) {
-                addresses.push(place.formatted_address); // Adiciona o endereço à lista
-                updateAddressList(); // Atualiza a lista de endereços
-                document.getElementById('address-input').value = ''; // Limpa o campo de inserção
-            } else {
-                alert('Endereço inválido ou não encontrado');
-            }
-        });
-    }
-
     // Função para gerar a rota
     function generateRoute() {
         if (addresses.length < 2) {
@@ -146,7 +128,7 @@
             if (data.qrcode) {
                 generateQRCode(data.qrcode);
             }
-            if (data.suggestions.length > 0) {
+            if (data.suggestions && data.suggestions.length > 0) {
                 displaySuggestions(data.suggestions);
             }
         })
