@@ -3,148 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autocomplete de Endereço</title>
-    <!-- Incluindo a API do Google Maps com a chave de API fornecida pelo Flask -->
+    <title>Calculadora de Rota com QR Code</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initAutocomplete" async defer></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: #f4f7fc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
         .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
             background-color: white;
-            padding: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
-            width: 100%;
-            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            font-size: 24px;
             text-align: center;
-            margin-bottom: 20px;
             color: #333;
         }
-        #autocomplete {
+        .input-group {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
             width: 100%;
             padding: 10px;
             font-size: 16px;
-            margin: 10px 0;
-            border-radius: 5px;
+            margin-right: 10px;
             border: 1px solid #ccc;
+            border-radius: 5px;
         }
-        .error {
-            color: red;
-            font-size: 14px;
-            text-align: center;
-        }
-        .btn-container {
-            text-align: center;
-        }
-        .btn {
-            background-color: #4CAF50;
-            color: white;
+        button {
             padding: 10px 20px;
+            font-size: 16px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
-            margin-top: 20px;
         }
-        .btn:hover {
-            background-color: #45a049;
+        button#add-address {
+            background-color: #007bff;
+            color: white;
         }
-        .qrcode-container {
+        button#generate-route {
+            background-color: #28a745;
+            color: white;
+        }
+        .qr-code-container {
             text-align: center;
             margin-top: 20px;
         }
-        img {
-            max-width: 100%;
-            height: auto;
+        #print-button {
+            display: none;
+            background-color: #ffc107;
+            color: black;
+            margin-top: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        #suggestions {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .suggestion-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
         }
     </style>
-    <script>
-        let autocomplete;
-
-        // Função para inicializar o autocomplete do Google Maps
-        function initAutocomplete() {
-            // Obtém o campo de input do autocomplete
-            const input = document.getElementById('autocomplete');
-
-            // Cria uma instância do autocomplete
-            autocomplete = new google.maps.places.Autocomplete(input, {
-                types: ['address'],  // Apenas endereços
-                componentRestrictions: { country: 'br' } // Limita a busca ao Brasil (opcional)
-            });
-
-            // Adiciona um ouvinte para capturar o endereço selecionado
-            autocomplete.addListener('place_changed', onPlaceChanged);
-        }
-
-        // Função chamada quando um endereço é selecionado
-        function onPlaceChanged() {
-            const place = autocomplete.getPlace();
-
-            // Se não houver uma geometria associada ao endereço, exibe um erro
-            if (!place.geometry) {
-                document.getElementById('error').textContent = "Endereço inválido ou incompleto.";
-                return;
-            }
-
-            // Exibe o endereço selecionado no console (pode ser usado de outras formas também)
-            console.log("Endereço selecionado: " + place.formatted_address);
-            document.getElementById('error').textContent = "";
-            generateQRCode(place.formatted_address);  // Chama a função para gerar o QR Code
-        }
-
-        // Função para gerar o QR Code com o endereço
-        function generateQRCode(address) {
-            // Use uma API ou uma biblioteca como qrcode.js para gerar o QR code
-            const url = `https://www.google.com/maps/search/?q=${encodeURIComponent(address)}`;
-            const qrCodeImage = document.createElement('img');
-            qrCodeImage.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=200x200`;
-
-            // Exibe o QR code na página
-            const qrContainer = document.getElementById('qrcode-container');
-            qrContainer.innerHTML = '';  // Limpa qualquer QR Code anterior
-            qrContainer.appendChild(qrCodeImage);
-
-            // Exibe o botão de impressão
-            document.getElementById('print-button').style.display = 'block';
-        }
-
-        // Função para imprimir o QR Code
-        function printQRCode() {
-            const qrCodeImage = document.querySelector('#qrcode-container img');
-            const printWindow = window.open('', '', 'width=600,height=400');
-            printWindow.document.write('<html><head><title>Imprimir QR Code</title></head><body>');
-            printWindow.document.write(`<img src="${qrCodeImage.src}" />`);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
-        }
-    </script>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Autocomplete de Endereço</h1>
-        <!-- Campo de input para endereço -->
-        <input id="autocomplete" placeholder="Digite um endereço" type="text">
-        <div id="error" class="error"></div>
+<div class="container">
+    <h1>Calculadora de Rota com QR Code</h1>
 
-        <div class="btn-container">
-            <button id="print-button" class="btn" style="display:none" onclick="printQRCode()">Imprimir QR Code</button>
-        </div>
-
-        <div id="qrcode-container" class="qrcode-container"></div>
+    <!-- Formulário de Inserção de Endereços -->
+    <div class="input-group">
+        <input type="text" id="address-input" placeholder="Digite o endereço" />
+        <button id="add-address">Adicionar Endereço</button>
     </div>
+
+    <div id="suggestions"></div>
+
+    <!-- Botão para Gerar a Rota -->
+    <button id="generate-route" onclick="generateRoute()">Gerar Rota</button>
+
+    <!-- Exibição do QR Code -->
+    <div class="qr-code-container" id="qrcode-container"></div>
+
+    <!-- Botão de Impressão -->
+    <button id="print-button" onclick="window.print()">Imprimir QR Code</button>
+</div>
+
+<script>
+    let addresses = []; // Lista de endereços inseridos pelo usuário
+    let map;
+
+    function initAutocomplete() {
+        const input = document.getElementById('address-input');
+        const autocomplete = new google.maps.places.Autocomplete(input);
+
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            if (place.geometry) {
+                addresses.push(place.formatted_address); // Adiciona o endereço à lista
+                console.log('Endereço adicionado: ', place.formatted_address);
+                input.value = ''; // Limpa o campo de inserção
+            } else {
+                alert('Endereço inválido ou não encontrado');
+            }
+        });
+    }
+
+    // Função para gerar a rota no Google Maps
+    function generateRoute() {
+        if (addresses.length < 2) {
+            alert('Por favor, insira ao menos dois endereços.');
+            return;
+        }
+
+        const origin = addresses[0];
+        const destination = addresses[addresses.length - 1];
+        const waypoints = addresses.slice(1, addresses.length - 1).map(address => ({ location: address }));
+
+        const routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${encodeURIComponent(waypoints.join('|'))}&travelmode=driving`;
+
+        // Gerar QR Code
+        generateQRCode(routeUrl);
+    }
+
+    function generateQRCode(url) {
+        const qrCodeImage = document.createElement('img');
+        qrCodeImage.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=200x200`;
+
+        // Exibe o QR code na página
+        const qrContainer = document.getElementById('qrcode-container');
+        qrContainer.innerHTML = '';  // Limpa qualquer QR Code anterior
+        qrContainer.appendChild(qrCodeImage);
+
+        // Exibe o botão de impressão
+        document.getElementById('print-button').style.display = 'inline-block';
+    }
+
+    // Adiciona um novo endereço à lista
+    document.getElementById('add-address').addEventListener('click', function() {
+        const addressInput = document.getElementById('address-input').value;
+        if (addressInput) {
+            addresses.push(addressInput);
+            alert(`Endereço adicionado: ${addressInput}`);
+            document.getElementById('address-input').value = ''; // Limpa o campo
+        }
+    });
+</script>
 
 </body>
 </html>
