@@ -26,16 +26,23 @@ def obter_coordenadas(endereco):
     Se não encontrado, tenta sugerir correções.
     """
     try:
+        # Tentando geocodificar o endereço
         geocode_result = gmaps.geocode(endereco)
+        
         if geocode_result:
             return (geocode_result[0]['geometry']['location']['lat'], geocode_result[0]['geometry']['location']['lng'])
+        
+        # Se o endereço não foi encontrado, sugerir alternativas com places
+        places_result = gmaps.places(endereco)
+        
+        if places_result:
+            sugestoes = []
+            for place in places_result[:5]:  # Limita a 5 sugestões
+                sugestoes.append(place['formatted_address'])
+            return {'error': f"Endereço não encontrado. Veja as sugestões: {', '.join(sugestoes)}"}
         else:
-            places_result = gmaps.places(endereco)
-            if places_result:
-                sugestao = places_result[0]['formatted_address']
-                return {'error': f"Endereço não encontrado. Você quis dizer: {sugestao}?"}
-            else:
-                return {'error': 'Endereço não encontrado e nenhuma sugestão disponível.'}
+            return {'error': 'Endereço não encontrado e nenhuma sugestão disponível.'}
+        
     except Exception as e:
         return {'error': f"Erro ao buscar o endereço {endereco}: {str(e)}"}
 
