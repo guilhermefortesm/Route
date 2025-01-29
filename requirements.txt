@@ -3,3 +3,4 @@ googlemaps
 geopy
 python-dotenv
 qrcode
+gunicorn
