@@ -1,72 +1,75 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calcular Rota</title>
-    <style>
-        .endereco-container {
-            margin-bottom: 10px;
-        }
-        #qr-code-container {
-            display: none;
-            margin-top: 20px;
-        }
-    </style>
+    <title>Calculadora de Rota</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h1>Digite os Endereços</h1>
-    <form action="/calcular-rota" method="POST">
+    <h1>Calculadora de Rota</h1>
+
+    <form id="enderecos-form">
         <div id="enderecos-container">
-            <div class="endereco-container">
-                <input type="text" name="enderecos" placeholder="Exemplo: Rua A" required>
+            <div>
+                <label for="endereco">Endereço:</label>
+                <input type="text" id="endereco" name="enderecos">
             </div>
         </div>
-        <button type="button" id="adicionar-endereco">Adicionar Endereço</button><br><br>
-        <input type="submit" value="Calcular Rota">
+
+        <button type="button" onclick="adicionarEndereco()">Adicionar Endereço</button>
+        <button type="submit">Calcular Rota</button>
     </form>
 
-    <!-- Container do QR Code -->
-    <div id="qr-code-container">
-        <h2>QR Code da Rota</h2>
-        <img id="qr-code-img" src="" alt="QR Code">
-        <br><br>
-        <button onclick="window.print()">Imprimir QR Code</button>
-    </div>
+    <div id="erro" style="color: red;"></div>
+    <div id="sugestoes"></div>
+    <div id="qrcode"></div>
 
     <script>
-        document.getElementById("adicionar-endereco").addEventListener("click", function() {
+        function adicionarEndereco() {
             const container = document.getElementById("enderecos-container");
-            const novoEndereco = document.createElement("div");
-            novoEndereco.classList.add("endereco-container");
-            novoEndereco.innerHTML = '<input type="text" name="enderecos" placeholder="Exemplo: Rua B">';
-            container.appendChild(novoEndereco);
-        });
-
-        // Função para exibir o QR Code
-        function showQRCode(url) {
-            document.getElementById("qr-code-img").src = url;
-            document.getElementById("qr-code-container").style.display = "block";
+            const input = document.createElement("div");
+            input.innerHTML = `
+                <label for="endereco">Endereço:</label>
+                <input type="text" name="enderecos">
+            `;
+            container.appendChild(input);
         }
 
-        // Captura o resultado do envio do formulário
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(form);
+        $("#enderecos-form").submit(function(e) {
+            e.preventDefault();
+            const formData = $(this).serialize();
+            $.post('/calcular-rota', formData, function(response) {
+                $('#erro').html('');
+                $('#sugestoes').html('');
+                $('#qrcode').html('');
 
-            fetch('/calcular-rota', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.blob())
-            .then(data => {
-                // Cria um URL temporário para a imagem do QR Code e exibe
-                const url = URL.createObjectURL(data);
-                showQRCode(url);
-            })
-            .catch(error => console.error('Erro:', error));
+                if (response.suggestions && response.suggestions.length > 0) {
+                    $('#erro').html('Alguns endereços não foram encontrados. Veja as sugestões para correção:');
+                    response.suggestions.forEach(function(sugestao) {
+                        $('#sugestoes').append(`<button onclick="selecionarEndereco('${sugestao}')">${sugestao}</button><br>`);
+                    });
+                }
+
+                // Exibe o QR Code gerado
+                const img = new Image();
+                img.src = 'data:image/png;base64,' + btoa(response.qrcode);
+                $('#qrcode').append(img);
+            }).fail(function(jqXHR) {
+                const response = jqXHR.responseJSON;
+                $('#erro').html(response.error);
+            });
         });
+
+        function selecionarEndereco(endereco) {
+            $('#erro').html('Você selecionou: ' + endereco);
+            $('#enderecos-container').html(`
+                <div>
+                    <label for="endereco">Endereço:</label>
+                    <input type="text" name="enderecos" value="${endereco}">
+                </div>
+            `);
+        }
     </script>
 </body>
 </html>
