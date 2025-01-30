@@ -3,4 +3,5 @@ Werkzeug==2.2.2
 googlemaps==4.4.7
 qrcode==7.3.1
 python-dotenv==0.19.2
-redis==4.5.5
+redis==4.5.5Flask==2.2.2
+gunicorn==21.2.0
