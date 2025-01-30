@@ -1,185 +1,153 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Rota com QR Code</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <title>Autocomplete Endereço e Gerar Rota</title>
+    <!-- Inclua a API do Google Maps com a biblioteca Places -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_DA_API&libraries=places"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            margin: 20px;
         }
-        .container {
-            max-width: 900px;
-            margin: auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
+        #endereco {
             width: 100%;
             padding: 10px;
             font-size: 16px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            margin-bottom: 10px;
         }
-        button {
+        #adicionar-endereco {
             padding: 10px 20px;
             font-size: 16px;
-            border: none;
-            border-radius: 5px;
             cursor: pointer;
         }
-        button#add-address {
-            background-color: #007bff;
-            color: white;
-        }
-        button#generate-route {
-            background-color: #28a745;
-            color: white;
-        }
-        .qr-code-container {
-            text-align: center;
+        #lista-enderecos {
             margin-top: 20px;
         }
-        #print-button {
-            display: none;
-            background-color: #ffc107;
-            color: black;
-            margin-top: 10px;
-            padding: 10px 20px;
-            cursor: pointer;
-        }
-        #address-list {
-            margin-top: 20px;
-        }
-        #address-list ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        #address-list li {
-            background-color: #f1f1f1;
-            padding: 8px;
+        .endereco-item {
+            padding: 10px;
+            border: 1px solid #ccc;
             margin-bottom: 5px;
-            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .remover-endereco {
+            color: red;
+            cursor: pointer;
+        }
+        #gerar-rota {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #qr-code {
+            margin-top: 20px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
+    <h1>Insira os endereços</h1>
+    <input type="text" id="endereco" placeholder="Digite um endereço">
+    <button id="adicionar-endereco">Adicionar Endereço</button>
 
-<div class="container">
-    <h1>Calculadora de Rota com QR Code</h1>
+    <div id="lista-enderecos"></div>
 
-    <!-- Formulário de Inserção de Endereços -->
-    <div class="input-group">
-        <input type="text" id="address-input" placeholder="Digite o endereço" />
-        <button id="add-address">Adicionar Endereço</button>
+    <button id="gerar-rota">Gerar Rota e QR Code</button>
+
+    <div id="qr-code">
+        <img id="qr-code-image" src="" alt="QR Code da Rota" style="display: none;">
     </div>
 
-    <div id="address-list">
-        <h3>Endereços Inseridos:</h3>
-        <ul id="address-ul"></ul>
-    </div>
-
-    <!-- Botão para Gerar a Rota -->
-    <button id="generate-route" onclick="generateRoute()">Gerar Rota</button>
-
-    <!-- Exibição do QR Code -->
-    <div class="qr-code-container" id="qrcode-container"></div>
-
-    <!-- Botão de Impressão -->
-    <button id="print-button" onclick="window.print()">Imprimir QR Code</button>
-</div>
-
-<script>
-    let addresses = []; // Lista de endereços inseridos pelo usuário
-
-    // Função para gerar a rota
-    function generateRoute() {
-        if (addresses.length < 2) {
-            alert('Por favor, insira ao menos dois endereços.');
-            return;
+    <script>
+        // Inicializa o autocomplete no campo de entrada
+        function initAutocomplete() {
+            const input = document.getElementById('endereco');
+            const autocomplete = new google.maps.places.Autocomplete(input, {
+                types: ['geocode'], // Filtra para endereços físicos
+                componentRestrictions: { country: 'br' } // Restringe ao Brasil
+            });
         }
 
-        // Envia os endereços ao backend para calcular a rota otimizada
-        fetch('/calcular-rota', {
-            method: 'POST',
-            body: new URLSearchParams({
-                'enderecos': addresses
-            }),
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.qrcode) {
-                generateQRCode(data.qrcode);
-            }
-            if (data.suggestions && data.suggestions.length > 0) {
-                displaySuggestions(data.suggestions);
-            }
-        })
-        .catch(error => console.error('Erro ao gerar a rota:', error));
-    }
+        // Lista de endereços adicionados
+        let enderecos = [];
 
-    // Função para gerar o QR Code
-    function generateQRCode(base64Image) {
-        const qrCodeImage = document.createElement('img');
-        qrCodeImage.src = 'data:image/png;base64,' + base64Image;
-        
-        const qrContainer = document.getElementById('qrcode-container');
-        qrContainer.innerHTML = '';  // Limpa qualquer QR Code anterior
-        qrContainer.appendChild(qrCodeImage);
+        // Adiciona um endereço à lista
+        document.getElementById('adicionar-endereco').addEventListener('click', () => {
+            const enderecoInput = document.getElementById('endereco');
+            const endereco = enderecoInput.value.trim();
 
-        // Exibe o botão de impressão
-        document.getElementById('print-button').style.display = 'inline-block';
-    }
-
-    // Atualiza a lista de endereços
-    function updateAddressList() {
-        const ul = document.getElementById('address-ul');
-        ul.innerHTML = ''; // Limpa a lista
-        addresses.forEach(address => {
-            const li = document.createElement('li');
-            li.textContent = address;
-            ul.appendChild(li);
+            if (endereco) {
+                enderecos.push(endereco);
+                atualizarListaEnderecos();
+                enderecoInput.value = ''; // Limpa o campo de entrada
+            } else {
+                alert('Por favor, insira um endereço válido.');
+            }
         });
-    }
 
-    // Exibe sugestões de correção de endereços
-    function displaySuggestions(suggestions) {
-        const suggestionList = document.createElement('ul');
-        suggestions.forEach(suggestion => {
-            const li = document.createElement('li');
-            li.textContent = suggestion;
-            suggestionList.appendChild(li);
-        });
-        document.getElementById('qrcode-container').appendChild(suggestionList);
-    }
+        // Atualiza a lista de endereços na tela
+        function atualizarListaEnderecos() {
+            const lista = document.getElementById('lista-enderecos');
+            lista.innerHTML = ''; // Limpa a lista
 
-    // Adiciona um novo endereço à lista
-    document.getElementById('add-address').addEventListener('click', function() {
-        const addressInput = document.getElementById('address-input').value;
-        if (addressInput) {
-            addresses.push(addressInput);
-            updateAddressList();
-            document.getElementById('address-input').value = ''; // Limpa o campo
+            enderecos.forEach((endereco, index) => {
+                const item = document.createElement('div');
+                item.className = 'endereco-item';
+                item.innerHTML = `
+                    <span>${endereco}</span>
+                    <span class="remover-endereco" onclick="removerEndereco(${index})">Remover</span>
+                `;
+                lista.appendChild(item);
+            });
         }
-    });
-</script>
 
+        // Remove um endereço da lista
+        window.removerEndereco = function(index) {
+            enderecos.splice(index, 1);
+            atualizarListaEnderecos();
+        };
+
+        // Envia os endereços para o back-end e gera a rota
+        document.getElementById('gerar-rota').addEventListener('click', () => {
+            if (enderecos.length < 2) {
+                alert('Adicione pelo menos dois endereços para calcular a rota.');
+                return;
+            }
+
+            fetch('/calcular-rota', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ enderecos: enderecos }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Exibe o QR Code
+                    const qrCodeImage = document.getElementById('qr-code-image');
+                    qrCodeImage.src = `data:image/png;base64,${data.qrcode}`;
+                    qrCodeImage.style.display = 'block';
+
+                    // Exibe sugestões (se houver)
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        alert('Sugestões: ' + data.suggestions.join('\n'));
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao enviar endereços:', error);
+            });
+        });
+
+        // Inicializa o autocomplete quando a página carregar
+        window.onload = initAutocomplete;
+    </script>
 </body>
 </html>
