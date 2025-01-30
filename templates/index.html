@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Rotas com QR Code</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Estilos personalizados -->
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .form-control {
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .btn-primary, .btn-secondary {
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .endereco-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+        .remover-endereco {
+            color: #ff4d4d;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .remover-endereco:hover {
+            color: #cc0000;
+        }
+        #qr-code {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #qr-code img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            background: #fff;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            .form-control, .btn-primary, .btn-secondary {
+                font-size: 14px;
+            }
+            #map {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerador de Rotas com QR Code</h1>
+        <div class="mb-3">
+            <input type="text" id="endereco" class="form-control" placeholder="Digite um endereço">
+        </div>
+        <button id="adicionar-endereco" class="btn btn-primary w-100">Adicionar Endereço</button>
+
+        <div id="lista-enderecos" class="mt-4"></div>
+
+        <button id="gerar-rota" class="btn btn-primary w-100 mt-4">Gerar Rota e QR Code</button>
+
+        <div id="map"></div>
+
+        <div id="qr-code" class="mt-4">
+            <img id="qr-code-image" src="" alt="QR Code da Rota" style="display: none;">
+            <button id="imprimir-qr" class="btn btn-secondary">Imprimir QR Code</button>
+        </div>
+    </div>
+
+    <script>
+        // Carrega a API do Google Maps de forma assíncrona
+        function loadGoogleMapsAPI() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyCHp44o52-uK254NSdhsM9ryvvJBFNVNQ0&libraries=places&callback=initMap`;
+            script.async = true;
+            script.onerror = () => {
+                console.error('Erro ao carregar a API do Google Maps. Verifique a chave da API.');
+            };
+            document.head.appendChild(script);
+        }
+
+        // Função para inicializar o mapa e o autocomplete
+        function initMap() {
+            // Coordenadas de Formiga, Minas Gerais
+            const formiga = { lat: -20.4645, lng: -45.4265 };
+
+            // Inicializa o mapa
+            const map = new google.maps.Map(document.getElementById('map'), {
+                center: formiga,
+                zoom: 12,
+            });
+
+            // Inicializa o autocomplete
+            const input = document.getElementById('endereco');
+            const autocomplete = new google.maps.places.Autocomplete(input, {
+                types: ['geocode'],
+                componentRestrictions: { country: 'br' },
+            });
+
+            // Define o mapa como contexto para o autocomplete
+            autocomplete.bindTo('bounds', map);
+
+            // Adiciona um marcador no centro do mapa (Formiga)
+            new google.maps.Marker({
+                position: formiga,
+                map: map,
+                title: 'Formiga, Minas Gerais',
+            });
+
+            window.map = map; // Torna o mapa acessível globalmente
+        }
+
+        let enderecos = [];
+
+        document.getElementById('adicionar-endereco').addEventListener('click', () => {
+            const enderecoInput = document.getElementById('endereco');
+            const endereco = enderecoInput.value.trim();
+            if (endereco) {
+                enderecos.push(endereco);
+                enderecoInput.value = '';
+                atualizarListaEnderecos();
+            } else {
+                alert('Por favor, insira um endereço válido.');
+            }
+        });
+
+        function atualizarListaEnderecos() {
+            const lista = document.getElementById('lista-enderecos');
+            lista.innerHTML = '';
+            enderecos.forEach((endereco, index) => {
+                const item = document.createElement('div');
+                item.className = 'endereco-item';
+                item.innerHTML = `<span>${endereco}</span><span class="remover-endereco" onclick="removerEndereco(${index})">Remover</span>`;
+                lista.appendChild(item);
+            });
+        }
+
+        window.removerEndereco = function(index) {
+            enderecos.splice(index, 1);
+            atualizarListaEnderecos();
+        };
+
+        document.getElementById('gerar-rota').addEventListener('click', () => {
+            if (enderecos.length < 2) {
+                alert('Adicione pelo menos dois endereços para calcular a rota.');
+                return;
+            }
+
+            fetch('/calcular-rota', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ enderecos: enderecos }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao calcular a rota');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.qrcode) {
+                    const qrCodeImage = document.getElementById('qr-code-image');
+                    qrCodeImage.src = `data:image/png;base64,${data.qrcode}`;
+                    qrCodeImage.style.display = 'block';
+
+                    // Desenha a rota no mapa
+                    if (data.coordenadas) {
+                        drawRoute(data.coordenadas);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao enviar endereços:', error);
+                alert('Erro ao enviar endereços. Verifique o console para mais detalhes.');
+            });
+        });
+
+        // Função para desenhar a rota no mapa
+        function drawRoute(coordinates) {
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(window.map);
+
+            const waypoints = coordinates.slice(1, -1).map(coord => ({
+                location: { lat: coord[0], lng: coord[1] },
+                stopover: true,
+            }));
+
+            const request = {
+                origin: { lat: coordinates[0][0], lng: coordinates[0][1] },
+                destination: { lat: coordinates[coordinates.length - 1][0], lng: coordinates[coordinates.length - 1][1] },
+                waypoints: waypoints,
+                optimizeWaypoints: true,
+                travelMode: 'DRIVING',
+            };
+
+            directionsService.route(request, (result, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(result);
+                } else {
+                    console.error('Erro ao desenhar a rota:', status);
+                }
+            });
+        }
+
+        document.getElementById('imprimir-qr').addEventListener('click', () => {
+            const qrCodeImg = document.getElementById('qr-code-image');
+            if (qrCodeImg.src && qrCodeImg.style.display !== 'none') {
+                const win = window.open('');
+                win.document.write(`<html><head><title>Imprimir QR Code</title></head><body style="text-align: center;"><img src="${qrCodeImg.src}"></body></html>`);
+                win.document.close();
+                win.onload = function() {
+                    win.focus();
+                    win.print();
+                    win.close();
+                };
+            } else {
+                alert('Gere o QR Code antes de imprimir.');
+            }
+        });
+
+        window.onload = loadGoogleMapsAPI;
+    </script>
+</body>
+</html>
