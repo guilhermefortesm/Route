@@ -49,13 +49,13 @@ def index():
 
 @app.route('/calcular-rota', methods=['POST'])
 def calcular_rota():
-    enderecos = request.form.getlist('enderecos')
+    data = request.get_json()
+    enderecos = data.get('enderecos', [])
 
     if not enderecos:
         return jsonify({'error': 'Nenhum endereço fornecido'}), 400
 
     coordenadas = []
-    erros = []
     sugestoes = []
     for endereco in enderecos:
         lat, lng, sugestao = obter_coordenadas(endereco)
